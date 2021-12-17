@@ -1,9 +1,10 @@
 import os
 import pathlib
+from threading import Thread
 
 import aiofiles
 import cv2
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
 
 import torchvision.models as models
@@ -16,11 +17,24 @@ from consts import class_names
 
 app = FastAPI()
 
-# model_transfer = models.resnet50(pretrained=True)
-# for param in model_transfer.parameters():
-#     param.require_grad = False
+model_transfer = None
 
-# model_transfer.load_state_dict(torch.load('nn_models/model_transfer.pt', map_location=torch.device('cpu')))
+
+def load_dog_breed_model():
+    global model_transfer
+    print('loading model')
+    model_transfer = models.resnet50(pretrained=True)
+    for param in model_transfer.parameters():
+        param.require_grad = False
+
+    print('loading state dictionary')
+    model_transfer.load_state_dict(torch.load('nn_models/model_transfer.pt', map_location=torch.device('cpu')))
+
+
+# load dog breed model in background
+load_thread = Thread(target=load_dog_breed_model)
+load_thread.daemon = True
+load_thread.start()
 
 
 @app.post('/detect_face/')
@@ -57,18 +71,20 @@ async def detect_face(file: UploadFile = File(...)):
     return FileResponse(output_image_path)
 
 
-# @app.post('/detect_dog_breed/')
-# async def detect_dog_breed(file: UploadFile = File(...)):
-#     cwd = pathlib.Path().resolve()
-#     working_image_path = os.path.join(cwd, f'uploads/{file.filename}')
-#     # save as file to path
-#     async with aiofiles.open(working_image_path, 'wb') as out_file:
-#         content = await file.read()
-#         await out_file.write(content)
-#
-#     predicted_breed = predict_breed(working_image_path, model_transfer)
-#
-#     return {'breed': predicted_breed}
+@app.post('/detect_dog_breed/')
+async def detect_dog_breed(file: UploadFile = File(...)):
+    if not model_transfer:
+        raise HTTPException(status_code=500, detail='model not loaded')
+    cwd = pathlib.Path().resolve()
+    working_image_path = os.path.join(cwd, f'uploads/{file.filename}')
+    # save as file to path
+    async with aiofiles.open(working_image_path, 'wb') as out_file:
+        content = await file.read()
+        await out_file.write(content)
+
+    predicted_breed = predict_breed(working_image_path, model_transfer)
+
+    return {'breed': predicted_breed}
 
 
 def predict_breed(img_path, model):

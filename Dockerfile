@@ -19,3 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # copy project
 COPY . .
+
+# cache resnet50 in the image
+RUN mkdir -p /root/.cache/torch/hub/checkpoints/
+RUN cp resnet50-0676ba61.pth /root/.cache/torch/hub/checkpoints/
