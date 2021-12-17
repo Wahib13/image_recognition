@@ -16,11 +16,11 @@ from consts import class_names
 
 app = FastAPI()
 
-model_transfer = models.resnet50(pretrained=True)
-for param in model_transfer.parameters():
-    param.require_grad = False
+# model_transfer = models.resnet50(pretrained=True)
+# for param in model_transfer.parameters():
+#     param.require_grad = False
 
-model_transfer.load_state_dict(torch.load('nn_models/model_transfer.pt', map_location=torch.device('cpu')))
+# model_transfer.load_state_dict(torch.load('nn_models/model_transfer.pt', map_location=torch.device('cpu')))
 
 
 @app.post('/detect_face/')
@@ -57,18 +57,18 @@ async def detect_face(file: UploadFile = File(...)):
     return FileResponse(output_image_path)
 
 
-@app.post('/detect_dog_breed/')
-async def detect_dog_breed(file: UploadFile = File(...)):
-    cwd = pathlib.Path().resolve()
-    working_image_path = os.path.join(cwd, f'uploads/{file.filename}')
-    # save as file to path
-    async with aiofiles.open(working_image_path, 'wb') as out_file:
-        content = await file.read()
-        await out_file.write(content)
-
-    predicted_breed = predict_breed(working_image_path, model_transfer)
-
-    return {'breed': predicted_breed}
+# @app.post('/detect_dog_breed/')
+# async def detect_dog_breed(file: UploadFile = File(...)):
+#     cwd = pathlib.Path().resolve()
+#     working_image_path = os.path.join(cwd, f'uploads/{file.filename}')
+#     # save as file to path
+#     async with aiofiles.open(working_image_path, 'wb') as out_file:
+#         content = await file.read()
+#         await out_file.write(content)
+#
+#     predicted_breed = predict_breed(working_image_path, model_transfer)
+#
+#     return {'breed': predicted_breed}
 
 
 def predict_breed(img_path, model):
